@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: posterr-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://posterr:securepass@db:5432/posterr_db?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - posterr-network
+    command: sh -c "npx prisma migrate dev && npm run dev"
+
+  db:
+    image: postgres:15-alpine
+    container_name: posterr-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=posterr
+      - POSTGRES_PASSWORD=securepass
+      - POSTGRES_DB=posterr_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - posterr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U posterr -d posterr_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  posterr-network:
+    driver: bridge

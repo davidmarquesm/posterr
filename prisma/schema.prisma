@@ -1,0 +1,44 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PostType {
+  ORIGINAL
+  REPOST
+  QUOTE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique @db.VarChar(14)
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  
+  posts     Post[]
+
+  @@map("users")
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  content   String?  @db.VarChar(777)
+  type      PostType
+  createdAt DateTime @default(now()) @map("created_at")
+
+  authorId  String   @map("author_id")
+  author    User     @relation(fields: [authorId], references: [id])
+
+  originalPostId String? @map("original_post_id")
+  originalPost   Post?   @relation("PostHistory", fields: [originalPostId], references: [id])
+  
+  quotedBy       Post[]  @relation("PostHistory")
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("posts")
+}
